@@ -1,0 +1,82 @@
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+
+	"github.com/gorilla/mux"
+)
+
+type User struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+var users []User
+
+func main() {
+	router := mux.NewRouter()
+	users = append(users, User{ID: "1", Name: "Jaber", Email: "jaber@gmail.com", Password: "password"})
+
+	router.HandleFunc("/api/user", getUser).Methods("GET")
+	router.HandleFunc("/api/user", createUser).Methods("POST")
+	router.HandleFunc("/api/user/{id}", getUserById).Methods("GET")
+	router.HandleFunc("/api/user/{id}", updateUser).Methods("PUT")
+	router.HandleFunc("/api/user/{id}", deleteUser).Methods("DELETE")
+
+	log.Println("Listening on localhost:9090")
+	http.ListenAndServe(":9090", router)
+}
+
+func getUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func createUser(w http.ResponseWriter, r *http.Request) {
+	var user User
+	json.NewDecoder(r.Body).Decode(&user)
+	users = append(users, user)
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func getUserById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	id := mux.Vars(r)["id"]
+	for _, user := range users {
+		if user.ID == id {
+			json.NewEncoder(w).Encode(user)
+			return
+		}
+	}
+}
+
+func updateUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	id := mux.Vars(r)["id"]
+	for index, user := range users {
+		if user.ID == id {
+			users = append(users[:index], users[index+1:]...)
+			var updatedUser User
+			json.NewDecoder(r.Body).Decode(&updatedUser)
+			users = append(users, updatedUser)
+			json.NewEncoder(w).Encode(updatedUser)
+			return
+		}
+	}
+}
+
+func deleteUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	id := mux.Vars(r)["id"]
+	for index, user := range users {
+		if user.ID == id {
+			users = append(users[:index], users[index+1:]...)
+			break
+		}
+	}
+}
